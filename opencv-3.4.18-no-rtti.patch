@@ -1,6 +1,99 @@
+diff -Nuarp opencv-3.4.18.orig/modules/calib3d/src/calibinit.cpp opencv-3.4.18/modules/calib3d/src/calibinit.cpp
+--- opencv-3.4.18.orig/modules/calib3d/src/calibinit.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/calib3d/src/calibinit.cpp	2023-06-01 09:59:56.602298000 +0700
+@@ -2237,7 +2237,6 @@ bool findCirclesGrid2(InputArray _image,
+     {
+         centers.clear();
+         CirclesGridFinder boxFinder(patternSize, points, parameters);
+-        try
+         {
+             bool isFound = boxFinder.findHoles();
+             if (isFound)
+@@ -2258,12 +2257,6 @@ bool findCirclesGrid2(InputArray _image,
+                 break;  // done, return result
+             }
+         }
+-        catch (const cv::Exception& e)
+-        {
+-            CV_UNUSED(e);
+-            CV_LOG_DEBUG(NULL, "findCirclesGrid2: attempt=" << i << ": " << e.what());
+-            // nothing, next attempt
+-        }
+ 
+         boxFinder.getHoles(centers);
+         if (i != attempts - 1)
+diff -Nuarp opencv-3.4.18.orig/modules/calib3d/src/solvepnp.cpp opencv-3.4.18/modules/calib3d/src/solvepnp.cpp
+--- opencv-3.4.18.orig/modules/calib3d/src/solvepnp.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/calib3d/src/solvepnp.cpp	2023-06-01 10:01:51.252834000 +0700
+@@ -311,32 +311,11 @@ bool solvePnPRansac(InputArray _opoints,
+ 
+     opoints_inliers.resize(npoints1);
+     ipoints_inliers.resize(npoints1);
+-    try
+     {
+         result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
+                           distCoeffs, rvec, tvec, useExtrinsicGuess,
+                           (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
+     }
+-    catch (const cv::Exception& e)
+-    {
+-        if (flags == SOLVEPNP_ITERATIVE &&
+-            npoints1 == 5 &&
+-            e.what() &&
+-            std::string(e.what()).find("DLT algorithm needs at least 6 points") != std::string::npos
+-        )
+-        {
+-            CV_LOG_INFO(NULL, "solvePnPRansac(): solvePnP stage to compute the final pose using points "
+-                "in the consensus set raised DLT 6 points exception, use result from MSS (Minimal Sample Sets) stage instead.");
+-            rvec = _local_model.col(0);    // output rotation vector
+-            tvec = _local_model.col(1);    // output translation vector
+-            result = 1;
+-        }
+-        else
+-        {
+-            // raise other exceptions
+-            throw;
+-        }
+-    }
+ 
+     if (result <= 0)
+     {
+@@ -867,7 +846,6 @@ int solvePnPGeneric( InputArray _opoints
+         IPPE::PoseSolver poseSolver;
+         Mat rvec1, tvec1, rvec2, tvec2;
+         float reprojErr1, reprojErr2;
+-        try
+         {
+             poseSolver.solveGeneric(opoints, undistortedPoints, rvec1, tvec1, reprojErr1, rvec2, tvec2, reprojErr2);
+ 
+@@ -888,7 +866,6 @@ int solvePnPGeneric( InputArray _opoints
+                 vec_tvecs.push_back(tvec1);
+             }
+         }
+-        catch (...) { }
+     }
+     else if (flags == SOLVEPNP_IPPE_SQUARE)
+     {
+@@ -940,7 +917,6 @@ int solvePnPGeneric( InputArray _opoints
+         IPPE::PoseSolver poseSolver;
+         Mat rvec1, tvec1, rvec2, tvec2;
+         float reprojErr1, reprojErr2;
+-        try
+         {
+             poseSolver.solveSquare(opoints, undistortedPoints, rvec1, tvec1, reprojErr1, rvec2, tvec2, reprojErr2);
+ 
+@@ -960,7 +936,7 @@ int solvePnPGeneric( InputArray _opoints
+                 vec_rvecs.push_back(rvec1);
+                 vec_tvecs.push_back(tvec1);
+             }
+-        } catch (...) { }
++        }
+     }
+     else if (flags == SOLVEPNP_SQPNP)
+     {
 diff -Nuarp opencv-3.4.18.orig/modules/core/include/opencv2/core/bindings_utils.hpp opencv-3.4.18/modules/core/include/opencv2/core/bindings_utils.hpp
---- opencv-3.4.18.orig/modules/core/include/opencv2/core/bindings_utils.hpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/include/opencv2/core/bindings_utils.hpp	2022-11-16 17:32:38.096053227 +0800
+--- opencv-3.4.18.orig/modules/core/include/opencv2/core/bindings_utils.hpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/include/opencv2/core/bindings_utils.hpp	2023-06-01 09:51:10.952111000 +0700
 @@ -185,12 +185,6 @@ void generateVectorOfMat(size_t len, int
  }
  
@@ -30,8 +123,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/include/opencv2/core/bindings_utils.
  }
  
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/async.cpp opencv-3.4.18/modules/core/src/async.cpp
---- opencv-3.4.18.orig/modules/core/src/async.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/async.cpp	2022-11-16 17:32:38.097053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/async.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/src/async.cpp	2023-06-01 09:51:10.952111000 +0700
 @@ -118,7 +118,6 @@ struct AsyncArray::Impl
              if (has_exception)
              {
@@ -41,8 +134,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/async.cpp opencv-3.4.18/modules/
              CV_Error(Error::StsInternal, "AsyncArray: invalid state of 'has_result = true'");
          }
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/bindings_utils.cpp opencv-3.4.18/modules/core/src/bindings_utils.cpp
---- opencv-3.4.18.orig/modules/core/src/bindings_utils.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/bindings_utils.cpp	2022-11-16 17:32:38.098053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/bindings_utils.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/src/bindings_utils.cpp	2023-06-01 09:51:10.952111000 +0700
 @@ -15,7 +15,7 @@ String dumpInputArray(InputArray argumen
          return "InputArray: noArray()";
      std::ostringstream ss;
@@ -124,8 +217,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/bindings_utils.cpp opencv-3.4.18
  }
  
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/command_line_parser.cpp opencv-3.4.18/modules/core/src/command_line_parser.cpp
---- opencv-3.4.18.orig/modules/core/src/command_line_parser.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/command_line_parser.cpp	2022-11-16 17:32:38.099053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/command_line_parser.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/src/command_line_parser.cpp	2023-06-01 09:51:10.952111000 +0700
 @@ -124,7 +124,6 @@ static void from_str(const String& str,
  
  void CommandLineParser::getByName(const String& name, bool space_delete, int type, void* dst) const
@@ -223,8 +316,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/command_line_parser.cpp opencv-3
  
      return vec;
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/glob.cpp opencv-3.4.18/modules/core/src/glob.cpp
---- opencv-3.4.18.orig/modules/core/src/glob.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/glob.cpp	2022-11-16 17:32:38.099053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/glob.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/src/glob.cpp	2023-06-01 09:51:10.952111000 +0700
 @@ -231,7 +231,6 @@ static void glob_rec(const cv::String& d
      if ((dir = opendir (directory.c_str())) != 0)
      {
@@ -246,8 +339,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/glob.cpp opencv-3.4.18/modules/c
      }
      else
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/matrix.cpp opencv-3.4.18/modules/core/src/matrix.cpp
---- opencv-3.4.18.orig/modules/core/src/matrix.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/matrix.cpp	2022-11-16 17:32:38.100053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/matrix.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/src/matrix.cpp	2023-06-01 09:51:10.952111000 +0700
 @@ -640,18 +640,10 @@ void Mat::create(int d, const int* _size
  #endif
          if(!a)
@@ -288,8 +381,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/matrix.cpp opencv-3.4.18/modules
      updateContinuityFlag();
  
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/parallel.cpp opencv-3.4.18/modules/core/src/parallel.cpp
---- opencv-3.4.18.orig/modules/core/src/parallel.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/parallel.cpp	2022-11-16 17:32:38.101053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/parallel.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/src/parallel.cpp	2023-06-01 09:51:10.952111000 +0700
 @@ -335,29 +335,9 @@ namespace {
              CV_TRACE_ARG_VALUE(range_end, "range.end", (int64)r.end);
  #endif
@@ -338,8 +431,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/parallel.cpp opencv-3.4.18/modul
      else // nested parallel_for_() calls are not parallelized
  #endif // CV_PARALLEL_FRAMEWORK
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/persistence_c.cpp opencv-3.4.18/modules/core/src/persistence_c.cpp
---- opencv-3.4.18.orig/modules/core/src/persistence_c.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/persistence_c.cpp	2022-11-16 17:32:38.102053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/persistence_c.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/src/persistence_c.cpp	2023-06-01 09:51:10.952111000 +0700
 @@ -456,17 +456,10 @@ cvOpenFileStorage(const char* query, CvM
      CV_Assert(fs);
      memset( fs, 0, sizeof(*fs));
@@ -359,8 +452,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/persistence_c.cpp opencv-3.4.18/
  
  /* closes file storage and deallocates buffers */
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/persistence_types.cpp opencv-3.4.18/modules/core/src/persistence_types.cpp
---- opencv-3.4.18.orig/modules/core/src/persistence_types.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/persistence_types.cpp	2022-11-16 17:32:38.102053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/persistence_types.cpp	2023-06-01 10:27:55.910976470 +0700
++++ opencv-3.4.18/modules/core/src/persistence_types.cpp	2023-06-01 09:51:10.956111000 +0700
 @@ -756,13 +756,9 @@ static void* icvReadSeq( CvFileStorage*
              flags |= CV_SEQ_FLAG_HOLE;
          if( !strstr(flags_str, "untyped") )
@@ -376,8 +469,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/persistence_types.cpp opencv-3.4
      }
  
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/system.cpp opencv-3.4.18/modules/core/src/system.cpp
---- opencv-3.4.18.orig/modules/core/src/system.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/system.cpp	2022-11-16 17:32:38.103053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/system.cpp	2023-06-01 10:27:55.914976562 +0700
++++ opencv-3.4.18/modules/core/src/system.cpp	2023-06-01 09:51:10.956111000 +0700
 @@ -1214,8 +1214,6 @@ void error( const Exception& exc )
          static volatile int* p = 0;
          *p = 0;
@@ -423,8 +516,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/system.cpp opencv-3.4.18/modules
  }
  
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/umatrix.cpp opencv-3.4.18/modules/core/src/umatrix.cpp
---- opencv-3.4.18.orig/modules/core/src/umatrix.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/umatrix.cpp	2022-11-16 17:32:38.103053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/umatrix.cpp	2023-06-01 10:27:55.914976562 +0700
++++ opencv-3.4.18/modules/core/src/umatrix.cpp	2023-06-01 09:51:10.956111000 +0700
 @@ -516,14 +516,9 @@ UMat Mat::getUMat(int accessFlags, UMatU
          new_u->originalUMatData = u;
      }
@@ -504,8 +597,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/umatrix.cpp opencv-3.4.18/module
      CV_Assert(u->data != 0 && "Error mapping of UMat to host memory.");
      return Mat();
 diff -Nuarp opencv-3.4.18.orig/modules/core/src/utils/filesystem.cpp opencv-3.4.18/modules/core/src/utils/filesystem.cpp
---- opencv-3.4.18.orig/modules/core/src/utils/filesystem.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/core/src/utils/filesystem.cpp	2022-11-16 17:32:38.103053227 +0800
+--- opencv-3.4.18.orig/modules/core/src/utils/filesystem.cpp	2023-06-01 10:27:55.914976562 +0700
++++ opencv-3.4.18/modules/core/src/utils/filesystem.cpp	2023-06-01 09:51:10.956111000 +0700
 @@ -492,14 +492,9 @@ cv::String getCacheDirectory(const char*
                      && !utils::fs::isDirectory(default_cache_path))
                  {
@@ -522,8 +615,8 @@ diff -Nuarp opencv-3.4.18.orig/modules/core/src/utils/filesystem.cpp opencv-3.4.
                      {
                          CV_LOG_WARNING(NULL, "Creating new OpenCV cache directory: " << default_cache_path);
 diff -Nuarp opencv-3.4.18.orig/modules/imgproc/src/contours.cpp opencv-3.4.18/modules/imgproc/src/contours.cpp
---- opencv-3.4.18.orig/modules/imgproc/src/contours.cpp	2022-06-05 00:52:44.000000000 +0800
-+++ opencv-3.4.18/modules/imgproc/src/contours.cpp	2022-11-16 17:32:38.103053227 +0800
+--- opencv-3.4.18.orig/modules/imgproc/src/contours.cpp	2023-06-01 10:27:55.914976562 +0700
++++ opencv-3.4.18/modules/imgproc/src/contours.cpp	2023-06-01 09:51:10.960111000 +0700
 @@ -1761,7 +1761,6 @@ cvFindContours_Impl( void*  img,  CvMemS
      }
      else
